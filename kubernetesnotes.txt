@@ -20,6 +20,12 @@ kubectl create namespace dev-ns
 
 kubectl config set-context --current --namespace=NAMESPACE
 
+#change current config file
+export KUBECONFIG=/root/my-kube-config
+
+
+
+
 kubectl create deployment redis-deploy -n dev-ns --image=redis --replicas=2
 
 kubectl run static-busybox --image=busybox --command sleep 1000 --dry-run=client -oyaml > st.yaml
@@ -93,7 +99,19 @@ apt update
 apt install kubeadm=1.20.0-00 
 kubeadm upgrade node
 
+
+kubeadm init --apiserver-advertise-address $(hostname -i) --pod-network-cidr 10.5.0.0/16
+
+kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
+
+kubeadm token create --print-join-command
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
 apt install kubelet=1.20.0-00 -y
+
+systemctl restart kubelet
 
 kubectl exec webapp -- cat /log/app.log
 
@@ -156,6 +174,16 @@ spec:
 ETCDCTL_API=3 etcdctl  --data-dir /var/lib/etcd-from-backup \
 snapshot restore /opt/snapshot-pre-boot.db
 
+
+root@controlplane:~# ETCDCTL_API=3 etcdctl --endpoints=https://[127.0.0.1]:2379 \
+--cacert=/etc/kubernetes/pki/etcd/ca.crt \
+--cert=/etc/kubernetes/pki/etcd/server.crt \
+--key=/etc/kubernetes/pki/etcd/server.key \
+snapshot save /opt/snapshot-pre-boot.db
+
+
+ETCDCTL_API=3 etcdctl  --data-dir /var/lib/etcd-from-backup \
+snapshot restore /opt/snapshot-pre-boot.db
 
 root@controlplane:~# kubectl get pv --sort-by=.spec.capacity.storage
 NAME       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
